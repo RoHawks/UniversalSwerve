@@ -1,6 +1,7 @@
 package universalSwerve.components;
 
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import universalSwerve.utilities.AngleUtilities;
 import universalSwerve.utilities.Conversions;
 
@@ -13,6 +14,8 @@ public class Wheel
     private ITranslationSystem mTranslationSystem;
     private IRotationSystem mRotationSystem;
     private double mTargetAngle;
+    private double mTargetSpeed;
+    private boolean mDiagnosticsEnabled = false;
 
     public Wheel(WheelLabel pLabel, double pXOffsetFromCenter, double pYOffsetFromCenter,
     ITranslationSystem pTranslationSystem, IRotationSystem pRotationSystem)
@@ -23,7 +26,29 @@ public class Wheel
         mTranslationSystem = pTranslationSystem;
         mRotationSystem = pRotationSystem;
         mTargetAngle = 0;
+        mTargetSpeed = 0;
 
+    }
+
+    public void LogDiagnostics()
+    {
+        if(mDiagnosticsEnabled)
+        {
+            SmartDashboard.putNumber(GetWheelLabel().Text()+"_CurrentAngle", mRotationSystem.GetCurrentAngle());
+            SmartDashboard.putNumber(GetWheelLabel().Text()+"_TargetAngle", mTargetAngle);
+            SmartDashboard.putNumber(GetWheelLabel().Text()+"_CurrentSpeed", mTranslationSystem.GetVelocity());
+            SmartDashboard.putNumber(GetWheelLabel().Text()+"_TargetSpeed", mTargetSpeed);
+        }
+    }
+
+    public void EnableDiagnostics()
+    {
+        mDiagnosticsEnabled = true;
+    }
+
+    public void DisableDiagnostics()
+    {
+        mDiagnosticsEnabled = false;
     }
 
     public WheelLabel GetWheelLabel()
@@ -78,11 +103,13 @@ public class Wheel
     */
     public void SetWheelVelocity(double pSpeed)
     {
+        mTargetSpeed = pSpeed;
         mTranslationSystem.SetVelocity(pSpeed);
     }
 
     public void StopEverything()
     {
+        mTargetSpeed = 0;
         mRotationSystem.StopEverything();
         mTranslationSystem.StopEverything();
     }

@@ -1,6 +1,7 @@
 package universalSwerve;
 
 import universalSwerve.components.Wheel;
+import universalSwerve.components.WheelLabel;
 import universalSwerve.controls.ISwerveControls;
 import universalSwerve.hardware.IGyroscope;
 import universalSwerve.utilities.AngleUtilities;
@@ -42,6 +43,8 @@ public class SwerveDrive
     private boolean mIsIntentionallyTurning = false;
     private double mNudgingSpeed = 0.2;
 
+    private boolean mDiagnosticsEnabled = false;
+
 	public enum DrivingStyle
 	{
 		FIELD_RELATIVE,
@@ -76,9 +79,10 @@ public class SwerveDrive
         mAngleTrackController = new PIDController(0.01, 0, 0);
         mAngleTrackController.enableContinuousInput(0, 360);
         
+        Initialize();
     }
     
-    public void Initialize()
+    private void Initialize()
     {
         for(int i = 0; i < mWheels.length; i++)
         {
@@ -375,9 +379,7 @@ public class SwerveDrive
     public void StandardSwerveDrive(double pXTranslationComponent, double pYTranslationComponent, double pTranslationVelocityPercentage, double pRotationSpeedPercentage, boolean pTrackAngle, double pAngleToTrack)
     {
 
-        SmartDashboard.putNumber("GyroAngle",mGyroscope.GetCurrentAngle());
-
-
+      
         if(Math.abs(pRotationSpeedPercentage) < 0.01)
         {
             this.mLastIntentionalAngle = mGyroscope.GetCurrentAngle();
@@ -466,13 +468,6 @@ public class SwerveDrive
             double targetAngle = pDegrees;
                             
             wheel.SetWheelTargetAngle(targetAngle);
-            if(i == 0)
-            {
-                //log NE
-                SmartDashboard.putNumber("CurrentWheelAngle", wheel.GetCurrentAngle());
-                //SmartDashboard.putNumber("TargetAngle", targetAngle);
-            }
-
         }
     }
     public void SetWheelsToBreakMode()
@@ -502,7 +497,7 @@ public class SwerveDrive
     {
         for(int i = 0; i < mWheels.length; i++)
         {
-            SmartDashboard.putBoolean(mWheels[i].GetWheelLabel().Text() + "_IsClose", mWheels[i].IsCloseToTargetAngle());
+            //SmartDashboard.putBoolean(mWheels[i].GetWheelLabel().Text() + "_IsClose", mWheels[i].IsCloseToTargetAngle());
             if(!mWheels[i].IsCloseToTargetAngle())
             {
                 return false;
@@ -574,6 +569,7 @@ public class SwerveDrive
         }
     }
 
+    /*
     public void LogDriveData()
     {
         for(int i = 0; i < mWheels.length; i++)
@@ -583,5 +579,52 @@ public class SwerveDrive
             
             
         }
+    }
+    */
+
+    private Wheel GetWheelByLabel(WheelLabel pLabel)
+    {
+        for(int i = 0; i < mWheels.length; i++)
+        {
+            if(mWheels[i].GetWheelLabel().equals(pLabel))
+            {
+                return mWheels[i];
+            }
+        }
+        throw new RuntimeException("Unknown wheel label:" + pLabel.Text());
+    }
+
+    public void EnableDiagnostics(WheelLabel pLabel)
+    {
+        GetWheelByLabel(pLabel).EnableDiagnostics();
+    }
+
+    public void DisableDiagnostics(WheelLabel pLabel)
+    {
+        GetWheelByLabel(pLabel).DisableDiagnostics();
+    }
+
+    public void EnableDiagnostics()
+    {
+        mDiagnosticsEnabled = true;
+    }
+
+    public void DisableDiagnostics()
+    {
+        mDiagnosticsEnabled = false;    
+    }
+    public void LogDiagnostics()
+    {
+        if(mDiagnosticsEnabled)
+        {
+            for(int i = 0; i < mWheels.length; i++)
+            {
+                mWheels[i].LogDiagnostics();
+            }
+
+
+            SmartDashboard.putNumber("GyroAngle",mGyroscope.GetCurrentAngle());
+        }
+
     }
 }
