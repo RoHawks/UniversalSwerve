@@ -3,6 +3,7 @@ package universalSwerve;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.SupplyCurrentLimitConfiguration;
 import com.ctre.phoenix.motorcontrol.TalonFXFeedbackDevice;
+import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 
 import universalSwerve.components.Wheel;
@@ -10,8 +11,12 @@ import universalSwerve.components.WheelLabel;
 import universalSwerve.components.implementations.FalconTranslationSystem;
 import universalSwerve.components.implementations.SparkMaxAndLampreyRotationSystem;
 import universalSwerve.components.implementations.SparkMaxUtilizingAbsoluteEncoderRotationSystemContinuously;
+import universalSwerve.components.implementations.TalonSRXAndAbsoluteEncoderRotationSystem;
+import universalSwerve.components.implementations.TalonSRXOpenLoopTranslationSystem;
 import universalSwerve.hardware.implementations.ADIS16470Gyro;
 import universalSwerve.hardware.implementations.LampreyWheelAngleReader;
+import universalSwerve.hardware.implementations.NavX;
+import universalSwerve.hardware.implementations.ZeroGyro;
 import universalSwerve.utilities.PIDFConfiguration;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.SparkMaxAbsoluteEncoder;
@@ -21,10 +26,6 @@ import com.revrobotics.SparkMaxAbsoluteEncoder.Type;
 public class SwerveFactory 
 {
 
-    /**
-     *  
-     * 
-     */
     public static SwerveDrive Create2023Swerve()
     {        
 
@@ -240,6 +241,107 @@ public class SwerveFactory
     }
 
 
+    public static SwerveDrive CreateDedicatedTestChassisSwerve()
+    {        
+
+        
+        //Locations:
+        double WHEELS_LEFT_RIGHT_FROM_CENTER = 29.25/2.0;
+        double WHEELS_FRONT_BACK_FROM_CENTER = 27.5/2.0;
+
+        //Wheel details:
+        double WHEEL_DIAMETER = 3.25;
+        double DRIVE_GEAR_RATIO = 12.0/60.0*1.25/2.72*35.0/65.0;  //Rough, since I'm not sure I have the CAD and don't want to count gear teeth!
+
+        double MAX_LINEAR_SPEED = 3.0 * 12.0; //This guy needs to drive awfully slow because he has the 3DP wheels 
+        double MAX_ROTATIONAL_SPEED = 60; //degrees per second, //This guy needs to drive awfully slow because he has the 3DP wheels
+        double NUDGING_SPEED = 0.7;// * 0.15 / 0.17; //scaled down to keep actual nudging speed consistent
+
+        //ADIS16470Gyro gyro = new ADIS16470Gyro(edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis.kZ, true);
+        //Need to import NavX library
+
+      
+        //Turn FPID Configurations:
+        PIDFConfiguration neTurnFPIDCongiruation = new PIDFConfiguration(10, 0, 0, 0);
+        PIDFConfiguration seTurnFPIDCongiruation = new PIDFConfiguration(10, 0, 0, 0);
+        PIDFConfiguration swTurnFPIDCongiruation = new PIDFConfiguration(10, 0, 0, 0);
+        PIDFConfiguration nwTurnFPIDCongiruation = new PIDFConfiguration(10, 0, 0, 0);
+        PIDFConfiguration[] turnFPIDConfigurations= new PIDFConfiguration[]{neTurnFPIDCongiruation, seTurnFPIDCongiruation, swTurnFPIDCongiruation, nwTurnFPIDCongiruation };
+        
+        //determine these
+        //Drive Ports:
+        int neDriveChannel = 9;
+        int seDriveChannel = 16;
+        int swDriveChannel = 6;
+        int nwDriveChannel = 7;
+
+
+        //determine these
+        //Turn Ports:
+        int neTurnChannel = 10;
+        int seTurnChannel = 1;
+        int swTurnChannel = 2;
+        int nwTurnChannel = 3;
+
+        class Drive775ProCreator { TalonSRX CreateDriveMotor(int pDriveChannel) 
+            { 
+                TalonSRX returnValue = new TalonSRX(pDriveChannel);
+                returnValue.configSupplyCurrentLimit(new SupplyCurrentLimitConfiguration(true, 40, 60, 2));
+                returnValue.setInverted(false);    
+                returnValue.setNeutralMode(NeutralMode.Coast);
+                returnValue.configClosedloopRamp(0.05);
+                return returnValue;
+            }}
+
+        //Drive Motors:
+        Drive775ProCreator driveMotorCreator = new Drive775ProCreator();
+        TalonSRX neDriveMotor = driveMotorCreator.CreateDriveMotor(neDriveChannel);
+        TalonSRX seDriveMotor = driveMotorCreator.CreateDriveMotor(seDriveChannel);
+        TalonSRX swDriveMotor = driveMotorCreator.CreateDriveMotor(swDriveChannel);
+        TalonSRX nwDriveMotor = driveMotorCreator.CreateDriveMotor(nwDriveChannel);
+        TalonSRX[] driveMotors = new TalonSRX[] {neDriveMotor, seDriveMotor, swDriveMotor, nwDriveMotor};
+
+
+        class TurnMotorCreator { TalonSRX CreateTurnMotor(int pTurnChannel) {             
+            TalonSRX returnValue = new TalonSRX(pTurnChannel);
+            returnValue.configSupplyCurrentLimit(new SupplyCurrentLimitConfiguration(true, 40, 60, 2));
+            returnValue.setInverted(true);    
+            returnValue.setNeutralMode(NeutralMode.Brake);
+            //Probably need to set feedback device here somehow?  I forget how this works
+            return returnValue;
+        }}
+
+        //Turn Spak Maxes        
+        TurnMotorCreator turnMotorCreator = new TurnMotorCreator();        
+        TalonSRX neTurnMotor = turnMotorCreator.CreateTurnMotor(neTurnChannel);
+        TalonSRX seTurnMotor = turnMotorCreator.CreateTurnMotor(seTurnChannel);
+        TalonSRX swTurnMotor = turnMotorCreator.CreateTurnMotor(swTurnChannel);
+        TalonSRX nwTurnMotor = turnMotorCreator.CreateTurnMotor(nwTurnChannel);        
+        TalonSRX[] turnMotors = new TalonSRX[] { neTurnMotor,seTurnMotor, swTurnMotor, nwTurnMotor};
+
+        double[] turnEncoderOffsets = new double[4];
+        turnEncoderOffsets[0] = 2873;
+        turnEncoderOffsets[1] = 2584;
+        turnEncoderOffsets[2] = 3422;
+        turnEncoderOffsets[3] = 1883;
+
+        Wheel[] wheels = new Wheel[4];
+
+      
+        for(int i = 0; i < 4; i++)
+        {
+            wheels[i] = new Wheel(WheelLabel.FromInt(i), 
+                ((i == 0 || i == 1) ? 1.0 : -1.0) * WHEELS_LEFT_RIGHT_FROM_CENTER,
+                ((i == 0 || i == 3) ? 1.0 : -1.0) * WHEELS_FRONT_BACK_FROM_CENTER,                
+            new TalonSRXOpenLoopTranslationSystem(driveMotors[i], 20000, DRIVE_GEAR_RATIO, WHEEL_DIAMETER),
+            new TalonSRXAndAbsoluteEncoderRotationSystem(turnMotors[i], new PIDFConfiguration(0.6, 0.0002, 0, 0), turnEncoderOffsets[i], true));
+        }        
+        SwerveDrive returnValue = new SwerveDrive(wheels[0], wheels[1], wheels[2], wheels[3], new NavX(true, NavX.Axis.Yaw), MAX_LINEAR_SPEED, MAX_ROTATIONAL_SPEED, NUDGING_SPEED);
+      
+
+       return returnValue;
+
+    }
 
     
 }

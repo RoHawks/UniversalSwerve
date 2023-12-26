@@ -2,6 +2,7 @@ package universalSwerve.components;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import universalSwerve.components.implementations.WheelMode;
 import universalSwerve.utilities.AngleUtilities;
 import universalSwerve.utilities.Conversions;
 
@@ -16,6 +17,7 @@ public class Wheel
     private double mTargetAngle;
     private double mTargetSpeed;
     private boolean mDiagnosticsEnabled = false;
+    private WheelMode mWheelMode = WheelMode.Enabled;
 
     public Wheel(WheelLabel pLabel, double pXOffsetFromCenter, double pYOffsetFromCenter,
     ITranslationSystem pTranslationSystem, IRotationSystem pRotationSystem)
@@ -30,6 +32,16 @@ public class Wheel
 
     }
 
+    public void SetWheelMode(WheelMode pWheelMode)
+    {
+        mWheelMode = pWheelMode;
+    }
+
+    public WheelMode GetWheelMode()
+    {
+        return mWheelMode;
+    }
+
     public void LogDiagnostics()
     {
         if(mDiagnosticsEnabled)
@@ -38,6 +50,7 @@ public class Wheel
             SmartDashboard.putNumber(GetWheelLabel().Text()+"_TargetAngle", mTargetAngle);
             SmartDashboard.putNumber(GetWheelLabel().Text()+"_CurrentSpeed", mTranslationSystem.GetVelocity());
             SmartDashboard.putNumber(GetWheelLabel().Text()+"_TargetSpeed", mTargetSpeed);
+            SmartDashboard.putNumber(GetWheelLabel().Text()+"_RawAngle", mRotationSystem.GetRawCurrentAngle());
         }
     }
 

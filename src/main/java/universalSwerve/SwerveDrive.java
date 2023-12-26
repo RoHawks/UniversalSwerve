@@ -2,6 +2,7 @@ package universalSwerve;
 
 import universalSwerve.components.Wheel;
 import universalSwerve.components.WheelLabel;
+import universalSwerve.components.implementations.WheelMode;
 import universalSwerve.controls.ISwerveControls;
 import universalSwerve.hardware.IGyroscope;
 import universalSwerve.utilities.AngleUtilities;
@@ -88,7 +89,10 @@ public class SwerveDrive
         {
             mWheels[i].Initialize();
         }
+
+        mGyroscope.SetCurrentAngle(0);
     }
+
    
 
     //ATS:  What's going on here:  In 2023 a white paper was written describing how
@@ -334,10 +338,22 @@ public class SwerveDrive
                 SwerveModuleState optimizedTargetState = OptimizeTargetState(targetState, wheel.GetCurrentAngle());
                 //SwerveModuleState optimizedTargetState =targetState;
 
-                double targetAngle = AngleUtilities.ConvertSwerveKinematicsAnglesToOurAngles(optimizedTargetState.angle.getDegrees());                
-                wheel.SetWheelTargetAngle(targetAngle);
-                wheel.SetWheelVelocity(Conversions.MetersPerSecondToInchesPerSecond(optimizedTargetState.speedMetersPerSecond));
-
+                switch(wheel.GetWheelMode())
+                {
+                    case Enabled:
+                        double targetAngle = AngleUtilities.ConvertSwerveKinematicsAnglesToOurAngles(optimizedTargetState.angle.getDegrees());                
+                        wheel.SetWheelTargetAngle(targetAngle);
+                        wheel.SetWheelVelocity(Conversions.MetersPerSecondToInchesPerSecond(optimizedTargetState.speedMetersPerSecond));
+                        break;
+                    case DontMove:
+                        wheel.StopEverything();
+                        break;
+                    case Castor:
+                        throw new RuntimeException("Castor not supported yet.");
+                    default:
+                        throw new RuntimeException("Unknown wheel mode.");
+                        
+                }
                 /*
                 if(i == 3)
                 {
@@ -602,6 +618,11 @@ public class SwerveDrive
     public void DisableDiagnostics(WheelLabel pLabel)
     {
         GetWheelByLabel(pLabel).DisableDiagnostics();
+    }
+
+    public void SetWheelMode(WheelLabel pLabel, WheelMode pWheelMode)
+    {
+        GetWheelByLabel(pLabel).SetWheelMode(pWheelMode);
     }
 
     public void EnableDiagnostics()

@@ -60,4 +60,13 @@ public class Conversions
         double rpms = rotatitionsPer100ms * 60.0 * 10.0;
         return rpms;
     }
+
+    public static double CTREMagneticAbsoluteEncoderToDegrees(double pSensorReading, double pSensorReadingAtStraightAhead)
+    {
+        double ticksPerRotation = 4096.0;
+        double ticksPastStraightAhead = pSensorReading - pSensorReadingAtStraightAhead;
+        double degreesPastStraightAhead = ticksPastStraightAhead / ticksPerRotation * 360.0;
+        return AngleUtilities.Normalize(degreesPastStraightAhead);
+
+    }
 }
